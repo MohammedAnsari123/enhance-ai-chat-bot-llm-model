@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from llama_cpp import Llama
 from huggingface_hub import hf_hub_download
@@ -13,48 +13,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODEL_REPO = "qnguyen3/flan-t5-small-gguf"
-MODEL_FILE = "flan-t5-small-q4_0.gguf"
+MODEL_REPO = "bartowski/Qwen2.5-0.5B-Instruct-GGUF"
+MODEL_FILE = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
 
+print("Downloading model...")
+llm = None
 try:
     model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
-    print("Model downloaded")
-
+    print("Model path:", model_path)
+    
     llm = Llama(
         model_path=model_path,
-        n_ctx=512,
-        n_threads=1,
+        n_ctx=1024,
         n_gpu_layers=0,
         verbose=False
     )
     print("Model loaded successfully")
-
 except Exception as e:
-    print("Model load error:", e)
-    llm = None
+    print("Model load failed:", e)
 
 
 @app.get("/")
-def home():
-    if llm is None:
-        return {"status": "error", "message": "Model failed to load"}
-    return {"status": "ok", "message": "LLM Chatbot Running"}
+def root():
+    return {"status": "running", "model_loaded": llm is not None}
 
 
 @app.post("/chat")
-def chat(request: dict):
+async def chat(request: Request):
     if llm is None:
         return {"error": "Model not initialized"}
 
-    prompt = request.get("prompt")
-    if not prompt:
-        return {"error": "Prompt missing"}
+    body = await request.json()
+    messages = body.get("messages")
+    if not messages:
+        return {"error": "messages missing"}
 
-    output = llm(
-        prompt,
-        max_tokens=96,
-        temperature=0.7
-    )
+    prompt = ""
+    for m in messages:
+        prompt += f"<|im_start|>{m['role']}\n{m['content']}<|im_end|>\n"
+    prompt += "<|im_start|>assistant\n"
 
-    result = output["choices"][0]["text"].strip()
-    return {"response": result}
+    result = llm(prompt, max_tokens=200, stop=["<|im_end|>"])
+    text = result["choices"][0]["text"].strip()
+    return {"response": text}
