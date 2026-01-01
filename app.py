@@ -4,28 +4,56 @@ from huggingface_hub import hf_hub_download
 
 app = FastAPI()
 
-MODEL_REPO = "qnguyen3/flan-t5-small-gguf"
-MODEL_FILE = "flan-t5-small-q4_0.gguf"
+# Configuration
+MODEL_REPO = "Qwen/Qwen2.5-0.5B-Instruct-GGUF"
+MODEL_FILE = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
 
-print("Downloading model...")
-model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
-print("Model downloaded:", model_path)
+print(f"Downloading/Loading GGUF model from {MODEL_REPO}...")
+try:
+    model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
+    print(f"Model downloaded to: {model_path}")
 
-llm = Llama(
-    model_path=model_path,
-    n_threads=4,
-    n_ctx=1024
-)
+    # Use n_gpu_layers=0 for CPU inference
+    llm = Llama(
+        model_path=model_path,
+        n_ctx=2048,
+        n_gpu_layers=0, 
+        verbose=True
+    )
+    print("Model loaded successfully.")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    llm = None
 
 @app.get("/")
 def home():
-    return {"message": "LLM Chatbot is Running"}
+    if llm is None:
+        return {"status": "error", "message": "Model failed to load"}
+    return {"status": "ok", "message": "Service is running (Qwen optimized)"}
 
 @app.post("/chat")
 def chat(request: dict):
-    prompt = request.get("prompt", "")
-    if not prompt:
-        return {"error": "Prompt missing"}
-    output = llm(f"User: {prompt}\nAssistant:", max_tokens=128, temperature=0.7)
+    if llm is None:
+        return {"error": "Model not initialized"}
+        
+    messages = request.get("messages", [])
+    if not messages:
+        return {"error": "Messages missing"}
+    
+    # Simple ChatML formatting for Qwen
+    prompt = ""
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        prompt += f"<|im_start|>{role}\n{content}<|im_end|>\n"
+    prompt += "<|im_start|>assistant\n"
+
+    output = llm(
+        prompt, 
+        max_tokens=512, 
+        stop=["<|im_end|>"], 
+        temperature=0.7
+    )
+    
     text = output["choices"][0]["text"]
-    return {"response": text.strip()}
+    return { "text": text.strip() }
