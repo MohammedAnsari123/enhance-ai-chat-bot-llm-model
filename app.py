@@ -13,8 +13,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODEL_REPO = "bartowski/SmolLM-135M-Instruct-GGUF"
-MODEL_FILE = "smollm-135m-instruct-Q4_K_M.gguf"
+MODEL_REPO = "bartowski/Qwen2.5-0.5B-Instruct-GGUF"
+MODEL_FILE = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+
 
 print("Downloading and loading model...")
 model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
