@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from ctransformers import AutoModelForCausalLM
 from fastapi.middleware.cors import CORSMiddleware
+from huggingface_hub import hf_hub_download
 import os
 
 app = FastAPI()
@@ -17,19 +18,19 @@ app.add_middleware(
 )
 
 # Configuration
-# Use a GGUF quantized model repo.
-# SmolLM2 360M Instruct GGUF. We use q8_0 or q4_k_m. q8_0 is better quality, q4 is smaller.
-# Given 512MB RAM, we MUST use q4_k_m or similar.
 MODEL_REPO = "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF"
 MODEL_FILE = "smollm2-360m-instruct-q4_k_m.gguf" 
 
-print(f"Loading GGUF model from {MODEL_REPO}...")
+print(f"Downloading/Loading GGUF model from {MODEL_REPO}...")
 try:
-    # Load model with ctransformers
-    # gpu_layers=0 ensures CPU only.
+    # Explicitly download the file first to ensure we have the local path
+    model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
+    print(f"Model downloaded to: {model_path}")
+
+    # Load model with ctransformers using the local file path
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL_REPO,
-        model_file=MODEL_FILE,
+        os.path.dirname(model_path), # Pass directory
+        model_file=os.path.basename(model_path), # Pass filename
         model_type="llama", 
         context_length=2048,
     )
