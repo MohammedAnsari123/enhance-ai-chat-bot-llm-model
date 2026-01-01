@@ -21,6 +21,9 @@ app.add_middleware(
 MODEL_REPO = "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF"
 MODEL_FILE = "smollm2-360m-instruct-q4_k_m.gguf" 
 
+model = None
+load_error = None
+
 print(f"Downloading/Loading GGUF model from {MODEL_REPO}...")
 try:
     # Explicitly download the file first to ensure we have the local path
@@ -29,14 +32,15 @@ try:
 
     # Load model with ctransformers using the local file path
     model = AutoModelForCausalLM.from_pretrained(
-        os.path.dirname(model_path), # Pass directory
-        model_file=os.path.basename(model_path), # Pass filename
+        model_path, # Pass exact file path
         model_type="llama", 
         context_length=2048,
+        gpu_layers=0 # Force CPU
     )
     print("GGUF Model loaded successfully.")
 except Exception as e:
     print(f"Error loading model: {e}")
+    load_error = str(e)
     model = None
 
 class Message(BaseModel):
@@ -69,13 +73,13 @@ def apply_chat_template(messages: List[dict]) -> str:
 @app.get("/")
 async def health_check():
     if model is None:
-        return {"status": "error", "message": "Model failed to load"}
+        return {"status": "error", "message": "Model failed to load", "detail": load_error}
     return {"status": "ok", "message": "Service is running (GGUF optimized)"}
 
 @app.post("/chat")
 async def chat(data: ChatRequest):
     if model is None:
-        raise HTTPException(status_code=503, detail="Model not initialized")
+        raise HTTPException(status_code=503, detail=f"Model not initialized. Error: {load_error}")
 
     try:
         messages_list = [{"role": m.role, "content": m.content} for m in data.messages]
