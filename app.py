@@ -18,8 +18,8 @@ app.add_middleware(
 )
 
 # Configuration
-MODEL_REPO = "HuggingFaceTB/SmolLM2-360M-Instruct-GGUF"
-MODEL_FILE = "smollm2-360m-instruct-q4_k_m.gguf" 
+MODEL_REPO = "bartowski/SmolLM2-360M-Instruct-GGUF"
+MODEL_FILE = "SmolLM2-360M-Instruct-Q4_K_M.gguf" 
 
 model = None
 load_error = None
