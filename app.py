@@ -1,52 +1,40 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
+from llama_cpp import Llama
+from huggingface_hub import hf_hub_download
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-MODEL_NAME = "HuggingFaceTB/SmolLM2-360M-Instruct"
+MODEL_REPO = "HuggingFaceTB/SmolLM2-135M-Instruct-GGUF"
+MODEL_FILE = "smollm2-135m-instruct-Q4_K_M.gguf"
 
-try:
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
-        torch_dtype=torch.float32,
-        low_cpu_mem_usage=True
-    )
-except Exception as e:
-    model = None
-    load_error = str(e)
+print("Downloading and loading model...")
+model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
 
-class ChatRequest(BaseModel):
+model = Llama(
+    model_path=model_path,
+    n_threads=2,
+    n_ctx=1024,
+    n_gpu_layers=0
+)
+
+class ChatReq(BaseModel):
     message: str
 
-@app.get("/")
-def root():
-    if model is None:
-        return {"status": "error", "detail": load_error}
-    return {"status": "ok"}
-
 @app.post("/chat")
-def chat(req: ChatRequest):
-    if model is None:
-        raise HTTPException(status_code=503)
-
-    inputs = tokenizer(req.message, return_tensors="pt")
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=150,
-        do_sample=True,
-        temperature=0.8
+async def chat(req: ChatReq):
+    response = model(
+        req.message,
+        max_tokens=100,
+        temperature=0.7,
+        stop=["</s>"]
     )
-
-    return {"reply": tokenizer.decode(outputs[0], skip_special_tokens=True)}
+    return {"reply": response["choices"][0]["text"]}
