@@ -13,10 +13,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODEL_REPO = "bartowski/Qwen2.5-0.5B-Instruct-GGUF"
-MODEL_FILE = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
-
-print("Downloading model...")
+MODEL_REPO = "qnguyen3/flan-t5-small-gguf"
+MODEL_FILE = "flan-t5-small-q4_0.gguf"
 
 try:
     model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
@@ -25,14 +23,14 @@ try:
     llm = Llama(
         model_path=model_path,
         n_ctx=512,
+        n_threads=1,
         n_gpu_layers=0,
-        n_threads=1,  # Render Free Tier CPU limit
         verbose=False
     )
     print("Model loaded successfully")
 
 except Exception as e:
-    print(f"Model load error: {e}")
+    print("Model load error:", e)
     llm = None
 
 
