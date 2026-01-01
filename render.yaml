@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: free-tier-chatbot
+    name: free-llm-chatbot
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt

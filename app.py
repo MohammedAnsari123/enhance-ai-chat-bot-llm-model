@@ -1,45 +1,31 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
 from llama_cpp import Llama
 from huggingface_hub import hf_hub_download
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+MODEL_REPO = "qnguyen3/flan-t5-small-gguf"
+MODEL_FILE = "flan-t5-small-q4_0.gguf"
 
-MODEL_REPO = "bartowski/Qwen2.5-0.5B-Instruct-GGUF"
-MODEL_FILE = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
-
-
-print("Downloading and loading model...")
+print("Downloading model...")
 model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
+print("Model downloaded:", model_path)
 
-model = Llama(
+llm = Llama(
     model_path=model_path,
-    n_threads=2,  # Render free tier = 2 CPU
-    n_ctx=1024,
-    n_gpu_layers=0
+    n_threads=4,
+    n_ctx=1024
 )
-
-class ChatReq(BaseModel):
-    message: str
-
-@app.post("/chat")
-async def chat(req: ChatReq):
-    response = model(
-        req.message,
-        max_tokens=120,
-        temperature=0.7,
-        stop=["</s>"]
-    )
-    return {"reply": response["choices"][0]["text"]}
 
 @app.get("/")
-def root():
-    return {"status": "ok"}
+def home():
+    return {"message": "LLM Chatbot is Running"}
+
+@app.post("/chat")
+def chat(request: dict):
+    prompt = request.get("prompt", "")
+    if not prompt:
+        return {"error": "Prompt missing"}
+    output = llm(f"User: {prompt}\nAssistant:", max_tokens=128, temperature=0.7)
+    text = output["choices"][0]["text"]
+    return {"response": text.strip()}
