@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from llama_cpp import Llama
 from huggingface_hub import hf_hub_download
+import os
 
 app = FastAPI()
 
@@ -62,3 +63,7 @@ async def chat(request: Request):
     result = llm(prompt, max_tokens=200, stop=["<|im_end|>"])
     text = result["choices"][0]["text"].strip()
     return {"response": text}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
