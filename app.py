@@ -13,15 +13,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MODEL_REPO = "HuggingFaceTB/SmolLM2-135M-Instruct-GGUF"
-MODEL_FILE = "smollm2-135m-instruct-Q4_K_M.gguf"
+MODEL_REPO = "bartowski/SmolLM-135M-Instruct-GGUF"
+MODEL_FILE = "smollm-135m-instruct-Q4_K_M.gguf"
 
 print("Downloading and loading model...")
 model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
 
 model = Llama(
     model_path=model_path,
-    n_threads=2,
+    n_threads=2,  # Render free tier = 2 CPU
     n_ctx=1024,
     n_gpu_layers=0
 )
@@ -33,8 +33,12 @@ class ChatReq(BaseModel):
 async def chat(req: ChatReq):
     response = model(
         req.message,
-        max_tokens=100,
+        max_tokens=120,
         temperature=0.7,
         stop=["</s>"]
     )
     return {"reply": response["choices"][0]["text"]}
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
