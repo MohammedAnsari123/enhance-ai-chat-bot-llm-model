@@ -1,6 +1,4 @@
 fastapi
 uvicorn
-transformers
-torch
-accelerate
 pydantic
+ctransformers>=0.2.27
