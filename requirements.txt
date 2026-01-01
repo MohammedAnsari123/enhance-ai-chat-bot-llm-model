@@ -1,4 +1,5 @@
 fastapi
 uvicorn
 pydantic
-ctransformers>=0.2.27
+llama-cpp-python>=0.2.23
+huggingface-hub
