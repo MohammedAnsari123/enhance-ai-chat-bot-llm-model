@@ -14,13 +14,19 @@ app.add_middleware(
 )
 
 MODEL_REPO = "bartowski/Qwen2.5-0.5B-Instruct-GGUF"
-MODEL_FILE = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+MODEL_FILE = "Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
 
-print("Downloading model...")
+print("Loading model...")
 llm = None
 try:
-    model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
-    print("Model path:", model_path)
+    # Check if model exists locally (pushed via Git LFS)
+    if os.path.exists(MODEL_FILE):
+        model_path = MODEL_FILE
+        print(f"Found local model: {model_path}")
+    else:
+        print(f"Local model not found. Downloading from {MODEL_REPO}...")
+        model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
+        print("Model downloaded to cache:", model_path)
     
     llm = Llama(
         model_path=model_path,
