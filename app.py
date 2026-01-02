@@ -31,8 +31,10 @@ try:
     
     llm = Llama(
         model_path=model_path,
-        n_ctx=1024,
-        n_gpu_layers=0,
+        n_ctx=2048,       # Increased context window
+        n_gpu_layers=0,   # CPU only
+        n_batch=512,      # Optimizes prompt processing speed
+        n_threads=4,      # Uses multi-threading for faster generation
         verbose=False
     )
     print("Model loaded successfully")
@@ -55,14 +57,19 @@ async def chat(request: Request):
     if not messages:
         return {"error": "messages missing"}
 
-    prompt = ""
-    for m in messages:
-        prompt += f"<|im_start|>{m['role']}\n{m['content']}<|im_end|>\n"
-    prompt += "<|im_start|>assistant\n"
+    messages = body.get("messages")
+    if not messages:
+        return {"error": "messages missing"}
 
-    result = llm(prompt, max_tokens=200, stop=["<|im_end|>"])
-    text = result["choices"][0]["text"].strip()
-    return {"response": text}
+    # Use native chat completion which handles templating correctly and efficiently
+    response = llm.create_chat_completion(
+        messages=messages,
+        max_tokens=200,
+        stop=["<|im_end|>", "<|endoftext|>"],
+        temperature=0.7
+    )
+    
+    return {"response": response["choices"][0]["message"]["content"]}
 
 if __name__ == "__main__":
     import uvicorn
