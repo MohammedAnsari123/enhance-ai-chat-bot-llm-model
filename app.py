@@ -15,22 +15,25 @@ app.add_middleware(
 )
 
 MODEL_REPO = "bartowski/Qwen2.5-0.5B-Instruct-GGUF"
-MODEL_FILE = "Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
+MODEL_FILENAME = "Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
+# Get absolute path to ensure we find the file regardless of CWD
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, MODEL_FILENAME)
 
-print("Loading model...")
+print(f"Checking for model at: {MODEL_PATH}")
 llm = None
 try:
-    # Check if model exists locally (pushed via Git LFS)
-    if os.path.exists(MODEL_FILE):
-        model_path = MODEL_FILE
-        print(f"Found local model: {model_path}")
+    # Check if model exists locally
+    if os.path.exists(MODEL_PATH):
+        print(f"✅ Found local model: {MODEL_PATH}")
+        model_location = MODEL_PATH
     else:
-        print(f"Local model not found. Downloading from {MODEL_REPO}...")
-        model_path = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILE)
-        print("Model downloaded to cache:", model_path)
+        print(f"⚠️ Local model not found at {MODEL_PATH}. Downloading from {MODEL_REPO}...")
+        model_location = hf_hub_download(repo_id=MODEL_REPO, filename=MODEL_FILENAME)
+        print("Model downloaded to cache:", model_location)
     
     llm = Llama(
-        model_path=model_path,
+        model_path=model_location,
         n_ctx=2048,       # Increased context window
         n_gpu_layers=0,   # CPU only
         n_batch=512,      # Optimizes prompt processing speed
